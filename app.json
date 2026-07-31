@@ -36,8 +36,7 @@
       "expo-secure-store"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": "/catch-app/app"
+      "typedRoutes": true
     }
   }
 }

@@ -27,7 +27,9 @@ cd "$REPO_ROOT"
 
 echo "==> Exporting web bundle"
 rm -rf dist
-npx expo export --platform web --output-dir dist/app
+# Pages serves this from a repo subpath, so assets need the prefix. app.config.js reads
+# this; without it the export assumes the domain root and every asset 404s.
+CATCH_WEB_BASE_URL=/catch-app/app npx expo export --platform web --output-dir dist/app
 
 echo "==> Assembling site"
 cp web-demo/index.html dist/index.html

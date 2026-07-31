@@ -10,7 +10,13 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "export:web": "expo export --platform web --output-dir dist",
+    "deploy:web": "npm run export:web && eas deploy",
+    "deploy:web:prod": "npm run export:web && eas deploy --prod",
+    "build:android:preview": "eas build --profile preview --platform android",
+    "build:ios:preview": "eas build --profile preview --platform ios",
+    "update:preview": "eas update --branch preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
