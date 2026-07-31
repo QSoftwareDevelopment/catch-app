@@ -5,9 +5,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/AuthProvider';
 import { useConversations } from '@/conversations/ConversationsProvider';
 import { audienceLabel, audienceSize } from '@/outreach/audiences';
-import { eventLabel } from '@/outreach/events';
+import { campaignText } from '@/outreach/campaignText';
+import { eventLabel, findEvent } from '@/outreach/events';
 import { useOutreach } from '@/outreach/OutreachProvider';
 import { describeSchedule, fullMessage, messageCost, nextRun } from '@/outreach/sms';
+import { toneLabel } from '@/outreach/tone';
 import { TRIGGER_LABELS } from '@/outreach/types';
 import { colors, fontSize, radius, spacing } from '@/theme/theme';
 import { Button } from '@/ui/Button';
@@ -34,10 +36,14 @@ export default function CampaignScreen() {
     );
   }
 
+  const businessName = business?.name ?? 'Catch';
+  const text = campaignText(campaign, business?.sector, businessName);
   const recipients = audienceSize(conversations, campaign.audienceId);
-  const cost = messageCost(campaign.message, recipients);
+  const cost = messageCost(text, recipients);
   const automatic = campaign.triggerType !== 'manual';
   const live = campaign.status === 'active';
+  const generated = campaign.messageMode === 'generated';
+  const event = findEvent(business?.sector, campaign.eventId);
 
   return (
     <Screen scroll testID="campaign-screen">
@@ -48,13 +54,22 @@ export default function CampaignScreen() {
       <Text style={styles.title}>{campaign.name}</Text>
       <Text style={styles.subtitle}>{TRIGGER_LABELS[campaign.triggerType]} outreach</Text>
 
-      {/* The message exactly as it will arrive, opt-out included — the only preview
-          worth showing is the one the customer actually sees. */}
+      {/* Opt-out included, because the only preview worth showing is the one the
+          customer actually receives. */}
       <View style={styles.preview}>
-        <Text style={styles.previewText}>{fullMessage(campaign.message)}</Text>
+        <Text style={styles.previewText}>{fullMessage(text)}</Text>
       </View>
 
+      <Text style={styles.previewNote}>
+        {generated
+          ? event
+            ? `Example only — Catch writes a fresh message each time this fires, in a ${toneLabel(campaign.tone).toLowerCase()} tone, using the real details.`
+            : `Example only — Catch writes this in a ${toneLabel(campaign.tone).toLowerCase()} tone each time it runs.`
+          : 'Sent word for word, exactly as written.'}
+      </Text>
+
       <View style={styles.card}>
+        <Row label="Written by" value={generated ? `Catch · ${toneLabel(campaign.tone)}` : 'You'} />
         <Row
           label="When"
           value={
@@ -146,6 +161,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   previewText: { fontSize: fontSize.sm, lineHeight: 21, color: colors.textInverse },
+  previewNote: {
+    fontSize: fontSize.xs,
+    lineHeight: 17,
+    color: colors.textMuted,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.lg,
+  },
 
   card: {
     backgroundColor: colors.surface,

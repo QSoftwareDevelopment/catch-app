@@ -1,17 +1,21 @@
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import { useConversations } from '@/conversations/ConversationsProvider';
 import { AUDIENCES, audienceSize } from '@/outreach/audiences';
 import { eventsForSector } from '@/outreach/events';
+import { MessageSection } from '@/outreach/MessageSection';
+import { buildPreview } from '@/outreach/messagePreview';
 import { useOutreach } from '@/outreach/OutreachProvider';
 import { describeSchedule, messageCost, nextRun, OPT_OUT_FOOTER } from '@/outreach/sms';
+import { DEFAULT_TONE, type ToneId } from '@/outreach/tone';
 import {
   TRIGGER_BLURBS,
   TRIGGER_LABELS,
   WEEKDAY_SHORT,
+  type MessageMode,
   type TriggerType,
   type Weekday,
 } from '@/outreach/types';
@@ -23,13 +27,6 @@ import { Screen } from '@/ui/Screen';
 const TRIGGERS: TriggerType[] = ['manual', 'scheduled', 'event'];
 const HOURS = [7, 9, 11, 12, 14, 16, 17, 18, 19, 20];
 
-/**
- * Compose an outreach.
- *
- * One screen rather than a wizard: the three decisions — when, who, what — are each
- * small, and an owner writing a Friday voucher should be able to see the whole thing at
- * once rather than pressing Next three times.
- */
 export default function NewOutreachScreen() {
   const router = useRouter();
   const { business } = useAuth();
@@ -37,40 +34,49 @@ export default function NewOutreachScreen() {
   const { addCampaign, markSent } = useOutreach();
 
   const events = useMemo(() => eventsForSector(business?.sector), [business?.sector]);
+  const businessName = business?.name ?? 'Catch';
 
   const [trigger, setTrigger] = useState<TriggerType>('manual');
   const [audienceId, setAudienceId] = useState<string>('everyone');
   const [eventId, setEventId] = useState<string>(events[0]?.id ?? '');
   const [weekday, setWeekday] = useState<Weekday>(5);
   const [hour, setHour] = useState(17);
-  const [message, setMessage] = useState('');
+  const [mode, setMode] = useState<MessageMode>('custom');
+  const [tone, setTone] = useState<ToneId>(DEFAULT_TONE);
+  const [guidance, setGuidance] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const selectedEvent = events.find((e) => e.id === eventId);
   const recipients = audienceSize(conversations, audienceId);
-  const cost = messageCost(message, recipients);
   const schedule = { weekday, hour, minute: 0 };
 
-  /**
-   * Selecting an event also seeds the message.
-   *
-   * Only ever fills an empty box — overwriting something the owner has typed would be
-   * worse than leaving them to write it themselves.
-   */
-  function chooseEvent(id: string) {
-    setEventId(id);
-    const suggestion = events.find((e) => e.id === id)?.suggestedMessage;
-    if (suggestion && message.trim().length === 0) setMessage(suggestion);
-  }
+  // Preview doubles as the cost basis. An owner picking a chatty tone should see the
+  // extra segments before arming the campaign, not on the invoice.
+  const preview = useMemo(() => {
+    if (mode === 'custom') return customMessage;
+    if (selectedEvent) {
+      return buildPreview({ event: selectedEvent, tone, businessName, guidance });
+    }
+    return guidance.trim();
+  }, [mode, customMessage, selectedEvent, tone, businessName, guidance]);
+
+  const cost = messageCost(preview, recipients);
 
   function chooseTrigger(next: TriggerType) {
     setTrigger(next);
-    // The first event renders already ticked, so switching to Event must seed its
-    // message too — otherwise the tick claims a selection the composer ignored.
-    if (next === 'event' && eventId) chooseEvent(eventId);
+    // An event campaign is the case generation exists for, so default to it there.
+    // Manual sends are usually a specific announcement, so they default to exact words.
+    if (next === 'event') setMode('generated');
+    if (next === 'manual' && mode === 'generated' && !guidance.trim()) setMode('custom');
   }
 
   function handleSubmit() {
-    if (message.trim().length < 5) {
+    if (mode === 'generated' && !selectedEvent && guidance.trim().length < 5) {
+      setError('Tell Catch what to say, or switch to writing it yourself.');
+      return;
+    }
+    if (mode === 'custom' && customMessage.trim().length < 5) {
       setError('Write the message you want to send.');
       return;
     }
@@ -86,20 +92,23 @@ export default function NewOutreachScreen() {
 
     const name =
       trigger === 'event'
-        ? (events.find((e) => e.id === eventId)?.label ?? 'Event outreach')
-        : message.trim().split('\n')[0].slice(0, 40);
+        ? (selectedEvent?.label ?? 'Event outreach')
+        : (mode === 'custom' ? customMessage : guidance).trim().split('\n')[0].slice(0, 40) ||
+          'Outreach';
 
     const campaign = addCampaign({
       name,
       triggerType: trigger,
       audienceId,
-      message: message.trim(),
+      messageMode: mode,
+      tone: mode === 'generated' ? tone : undefined,
+      guidance: mode === 'generated' ? guidance.trim() || undefined : undefined,
+      message: mode === 'custom' ? customMessage.trim() : undefined,
       schedule: trigger === 'scheduled' ? schedule : undefined,
       eventId: trigger === 'event' ? eventId : undefined,
       status: trigger === 'manual' ? 'draft' : 'active',
     });
 
-    // A manual outreach is sent from the composer; there is nothing else to wait for.
     if (trigger === 'manual') markSent(campaign.id, recipients);
 
     router.replace('/(app)/outreach');
@@ -191,7 +200,7 @@ export default function NewOutreachScreen() {
             return (
               <Pressable
                 key={event.id}
-                onPress={() => chooseEvent(event.id)}
+                onPress={() => setEventId(event.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 testID={`event-${event.id}`}
@@ -236,33 +245,36 @@ export default function NewOutreachScreen() {
 
       {/* --- 3. What ------------------------------------------------------- */}
       <Text style={styles.step}>3 · What does it say?</Text>
-      <View style={styles.composer}>
-        <TextInput
-          value={message}
-          onChangeText={(next) => {
-            setMessage(next);
-            if (error) setError(null);
-          }}
-          placeholder="Order NOW for 50% off — this hour only."
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Message"
-          testID="outreach-message"
-        />
-      </View>
+      <MessageSection
+        mode={mode}
+        onModeChange={setMode}
+        tone={tone}
+        onToneChange={setTone}
+        guidance={guidance}
+        onGuidanceChange={(next) => {
+          setGuidance(next);
+          if (error) setError(null);
+        }}
+        customMessage={customMessage}
+        onCustomMessageChange={(next) => {
+          setCustomMessage(next);
+          if (error) setError(null);
+        }}
+        preview={preview}
+        event={trigger === 'event' ? selectedEvent : undefined}
+        guidancePlaceholder={
+          trigger === 'event'
+            ? 'e.g. mention we close at 9'
+            : 'e.g. 50% off for the next hour'
+        }
+      />
 
-      {/* Owners are billed per 160-character segment, and one emoji halves that. Showing
-          the real total is the difference between a $4 send and a surprise $40 one. */}
       <View style={styles.costRow}>
         <Text style={styles.costText}>
           {cost.characters} chars · {cost.segments} {cost.segments === 1 ? 'text' : 'texts'} each
           {cost.unicode ? ' · emoji shortens each text' : ''}
         </Text>
-        <Text style={styles.costTotal}>
-          {cost.totalSegments} total
-        </Text>
+        <Text style={styles.costTotal}>{cost.totalSegments} total</Text>
       </View>
 
       <Text style={styles.optOut}>
@@ -301,7 +313,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.textMuted,
     marginBottom: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
 
   triggerRow: { flexDirection: 'row', gap: spacing.sm },
@@ -380,21 +392,11 @@ const styles = StyleSheet.create({
   count: { fontSize: fontSize.lg, fontWeight: '800', color: colors.text },
   countZero: { color: colors.borderStrong },
 
-  composer: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  input: { minHeight: 110, fontSize: fontSize.sm, lineHeight: 21, color: colors.text },
-
   costRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     gap: spacing.md,
   },
   costText: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted },

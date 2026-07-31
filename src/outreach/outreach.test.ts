@@ -195,10 +195,16 @@ describe('events per sector', () => {
     expect(eventsForSector('hvac').map((e) => e.id)).not.toContain('new_listing');
   });
 
-  it('gives every event a suggested message so the box is never empty', () => {
+  it('gives every event the material a message is written from', () => {
+    // An event carries no wording — it carries what happened, what is being offered, a
+    // sample of the detail that gets filled in, and the reply keyword. A gap in any of
+    // these produces a broken sentence at send time.
     for (const sector of ['hvac', 'restaurant', 'real_estate', 'fitness', 'salon_spa']) {
       for (const event of eventsForSector(sector)) {
-        expect(event.suggestedMessage.trim().length).toBeGreaterThan(10);
+        expect(event.subject.trim().length).toBeGreaterThan(5);
+        expect(event.offer.trim().length).toBeGreaterThan(2);
+        expect(event.sampleDetail.trim().length).toBeGreaterThan(2);
+        expect(event.keyword).toMatch(/^[A-Z]+$/);
       }
     }
   });

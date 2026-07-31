@@ -8,6 +8,7 @@ import { audienceLabel, audienceSize } from '@/outreach/audiences';
 import { eventLabel } from '@/outreach/events';
 import { useOutreach } from '@/outreach/OutreachProvider';
 import { describeSchedule } from '@/outreach/sms';
+import { toneLabel } from '@/outreach/tone';
 import { TRIGGER_LABELS, type Campaign } from '@/outreach/types';
 import { colors, fontSize, radius, spacing } from '@/theme/theme';
 import { Button } from '@/ui/Button';
@@ -157,6 +158,9 @@ function Row({
         <Text style={styles.rowAudience} numberOfLines={1}>
           {audienceLabel(campaign.audienceId)} · {recipients}{' '}
           {recipients === 1 ? 'number' : 'numbers'}
+          {campaign.messageMode === 'generated'
+            ? ` · AI · ${toneLabel(campaign.tone)}`
+            : ''}
         </Text>
       </View>
 

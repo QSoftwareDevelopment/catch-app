@@ -32,12 +32,28 @@ export type CampaignStatus =
   /** A manual send that has gone out. */
   | 'sent';
 
+/**
+ * Who writes the message.
+ *
+ * `generated` is the default and the point of the product: the assistant writes each
+ * message from the real event, in the owner's chosen tone. `custom` exists because an
+ * owner sometimes needs exact words — a legal disclaimer, a price they must state
+ * precisely — and taking that away would make the feature unusable for them.
+ */
+export type MessageMode = 'generated' | 'custom';
+
 export type Campaign = {
   id: string;
   name: string;
   triggerType: TriggerType;
   audienceId: string;
-  message: string;
+  messageMode: MessageMode;
+  /** Voice the assistant writes in. Present when messageMode is 'generated'. */
+  tone?: string;
+  /** Optional owner steer, e.g. "mention we close at 9". */
+  guidance?: string;
+  /** Exact text. Present only when messageMode is 'custom'. */
+  message?: string;
   /** Present for scheduled campaigns. */
   schedule?: Schedule;
   /** Present for event campaigns — an id from the sector's event catalogue. */
