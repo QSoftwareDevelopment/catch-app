@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
+import { useConnections } from '@/connections/ConnectionsProvider';
+import { integrationsForSector } from '@/connections/integrations';
+import { formatPhone } from '@/conversations/format';
 import { getSector, sectorLabel } from '@/sectors/sectors';
 import { colors, fontSize, radius, spacing } from '@/theme/theme';
 import { Button } from '@/ui/Button';
@@ -18,11 +21,14 @@ import { Screen } from '@/ui/Screen';
 export default function SettingsScreen() {
   const router = useRouter();
   const { session, business, signOut } = useAuth();
+  const { number, isConnected } = useConnections();
 
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sector = getSector(business?.sector);
+  const available = integrationsForSector(business?.sector);
+  const connectedCount = available.filter((i) => isConnected(i.id)).length;
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -53,6 +59,51 @@ export default function SettingsScreen() {
         <Text style={styles.title}>Settings</Text>
 
         <FormBanner message={error} />
+
+        {/* The number comes first: nothing else in the product works without it. No
+            number means no conversations to receive and nothing to send outreach from. */}
+        <Pressable
+          onPress={() => router.push('/(app)/settings/number')}
+          accessibilityRole="button"
+          testID="settings-number"
+          style={({ pressed }) => [styles.navCard, pressed && styles.navCardPressed]}
+        >
+          <View style={styles.navIcon}>
+            <Text style={styles.navIconText}>📞</Text>
+          </View>
+          <View style={styles.navBody}>
+            <Text style={styles.navTitle}>Catch number</Text>
+            <Text style={styles.navValue}>
+              {number ? formatPhone(number.e164) : 'Not set up yet'}
+            </Text>
+          </View>
+          {number ? null : (
+            <View style={styles.needed}>
+              <Text style={styles.neededText}>Needed</Text>
+            </View>
+          )}
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/(app)/settings/connections')}
+          accessibilityRole="button"
+          testID="settings-connections"
+          style={({ pressed }) => [styles.navCard, pressed && styles.navCardPressed]}
+        >
+          <View style={styles.navIcon}>
+            <Text style={styles.navIconText}>🔌</Text>
+          </View>
+          <View style={styles.navBody}>
+            <Text style={styles.navTitle}>Connections</Text>
+            <Text style={styles.navValue}>
+              {connectedCount === 0
+                ? `${available.length} available`
+                : `${connectedCount} connected`}
+            </Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
 
         <View style={styles.card}>
           <Text style={styles.cardHeading}>Business</Text>
@@ -121,6 +172,39 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.xl,
   },
+  navCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  navCardPressed: { opacity: 0.85, borderColor: colors.borderStrong },
+  navIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  navIconText: { fontSize: 17 },
+  navBody: { flex: 1 },
+  navTitle: { fontSize: fontSize.sm, fontWeight: '700', color: colors.text },
+  navValue: { marginTop: 2, fontSize: fontSize.xs, color: colors.textMuted },
+  needed: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.dangerSurface,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+  },
+  neededText: { fontSize: 10, fontWeight: '800', color: colors.danger },
+  chevron: { fontSize: 22, color: colors.borderStrong },
+
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -129,6 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     marginBottom: spacing.lg,
+    marginTop: spacing.md,
   },
   cardHeading: {
     fontSize: fontSize.xs,
