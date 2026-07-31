@@ -32,8 +32,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 28px;
-        padding: 48px 24px 64px;
+        gap: 20px;
+        padding: 28px 24px 48px;
       }
 
       header { text-align: center; max-width: 560px; }
@@ -223,14 +223,23 @@
         f.src = './app/?t=' + Date.now();
       }
 
-      // Scale the phone down when the window cannot fit it at 1:1.
+      // Scale the phone down when the window cannot fit it at 1:1, but never so far
+      // that the UI inside becomes unreadable — below ~0.6 the page scrolls instead.
+      var PHONE_H = 868;
+      var MIN_SCALE = 0.6;
+
       function fitPhone() {
-        if (window.innerWidth <= 720) return;
         var phone = document.getElementById('phone');
-        var available = window.innerHeight - 300;
-        var scale = Math.min(1, available / 868);
+        if (window.innerWidth <= 720) {
+          phone.style.removeProperty('--scale');
+          phone.style.marginBottom = '';
+          return;
+        }
+        var available = window.innerHeight - 210;
+        var scale = Math.max(MIN_SCALE, Math.min(1, available / PHONE_H));
         phone.style.setProperty('--scale', scale.toFixed(3));
-        phone.style.marginBottom = (868 * scale - 868) + 'px';
+        // transform:scale does not shrink layout box, so reclaim the leftover space.
+        phone.style.marginBottom = Math.round(PHONE_H * scale - PHONE_H) + 'px';
       }
 
       window.addEventListener('resize', fitPhone);
