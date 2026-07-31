@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catch — demo</title>
+    <link rel="icon" href="./app/favicon.ico" />
+    <style>
+      * { box-sizing: border-box; }
+
+      :root {
+        --ink: #0b1220;
+        --ink-soft: #16203a;
+        --accent: #2bd98b;
+        --muted: #9aa6c0;
+        /* Logical size of an iPhone 14 Pro viewport, which is what the app is laid
+           out against. The frame scales as a unit rather than reflowing. */
+        --screen-w: 390px;
+        --screen-h: 844px;
+      }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: radial-gradient(1200px 800px at 50% -10%, #1b2745 0%, var(--ink) 55%);
+        color: #fff;
+        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      }
+
+      .page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+        padding: 48px 24px 64px;
+      }
+
+      header { text-align: center; max-width: 560px; }
+
+      .wordmark {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+        color: var(--accent);
+        margin: 0 0 10px;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        letter-spacing: -0.7px;
+        margin: 0 0 10px;
+        font-weight: 800;
+      }
+
+      .sub { color: var(--muted); margin: 0; font-size: 15px; }
+
+      .badge {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 5px 12px;
+        border: 1px solid #33406a;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      /* ---- Phone ---- */
+
+      .phone {
+        position: relative;
+        width: calc(var(--screen-w) + 24px);
+        height: calc(var(--screen-h) + 24px);
+        background: #05070d;
+        border-radius: 56px;
+        padding: 12px;
+        box-shadow:
+          0 0 0 2px #2b3556,
+          0 40px 80px -20px rgba(0, 0, 0, 0.8),
+          0 0 90px -30px rgba(43, 217, 139, 0.35);
+        flex: none;
+        /* Scales the whole phone on short or narrow viewports. */
+        transform: scale(var(--scale, 1));
+        transform-origin: top center;
+      }
+
+      .screen {
+        position: relative;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        border-radius: 44px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+
+      .screen iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+      }
+
+      /* Dynamic-island style pill, drawn over the app. */
+      .island {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 112px;
+        height: 30px;
+        background: #05070d;
+        border-radius: 999px;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .home-bar {
+        position: absolute;
+        bottom: 7px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 132px;
+        height: 5px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.45);
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      button, .linkbtn {
+        appearance: none;
+        border: 1px solid #33406a;
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+        border-radius: 10px;
+        padding: 9px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      button:hover, .linkbtn:hover { background: rgba(255, 255, 255, 0.1); }
+
+      .note {
+        max-width: 520px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .note strong { color: #fff; }
+
+      /* On real phones the frame is pointless — show the app full-bleed instead. */
+      @media (max-width: 720px) {
+        .page { padding: 0; gap: 0; }
+        header, .controls, .note { display: none; }
+        .phone {
+          width: 100%;
+          height: 100vh;
+          border-radius: 0;
+          padding: 0;
+          box-shadow: none;
+          transform: none;
+        }
+        .screen { width: 100%; height: 100vh; border-radius: 0; }
+        .island, .home-bar { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <p class="wordmark">Catch</p>
+        <h1>Turn text messages into revenue.</h1>
+        <p class="sub">
+          Live demo of the iOS and Android app, running in the browser.
+        </p>
+        <span class="badge">Slice 1 — auth &amp; business onboarding</span>
+      </header>
+
+      <div class="phone" id="phone">
+        <div class="screen">
+          <div class="island"></div>
+          <iframe id="app" src="./app/" title="Catch app"></iframe>
+          <div class="home-bar"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="reloadApp()">Restart app</button>
+        <a class="linkbtn" href="./app/" target="_blank" rel="noopener">Open fullscreen</a>
+        <a
+          class="linkbtn"
+          href="https://github.com/QSoftwareDevelopment/catch-app"
+          target="_blank"
+          rel="noopener"
+          >Source</a
+        >
+      </div>
+
+      <p class="note">
+        This is the real React Native app rendered for web, so it is a faithful preview of
+        layout and flow rather than a mockup. <strong>Signing up does not work yet</strong> —
+        the database schema is still being reconciled with the existing project.
+      </p>
+    </div>
+
+    <script>
+      function reloadApp() {
+        var f = document.getElementById('app');
+        // Reassigning src rather than using contentWindow.location avoids touching the
+        // frame's history, so one click always lands back on the landing screen.
+        f.src = './app/?t=' + Date.now();
+      }
+
+      // Scale the phone down when the window cannot fit it at 1:1.
+      function fitPhone() {
+        if (window.innerWidth <= 720) return;
+        var phone = document.getElementById('phone');
+        var available = window.innerHeight - 300;
+        var scale = Math.min(1, available / 868);
+        phone.style.setProperty('--scale', scale.toFixed(3));
+        phone.style.marginBottom = (868 * scale - 868) + 'px';
+      }
+
+      window.addEventListener('resize', fitPhone);
+      fitPhone();
+    </script>
+  </body>
+</html>
