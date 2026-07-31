@@ -42,6 +42,15 @@ export type Sector = {
    */
   catalogSingular: string;
   catalogPlural: string;
+  /**
+   * The one document this trade is most likely to already have lying around — the thing
+   * to name on the scan button. A restaurant has a menu; a realtor has a listing sheet;
+   * an HVAC company has a price sheet. Asking a plumber to "scan your menu" is the kind
+   * of detail that makes software feel like it was built for someone else.
+   */
+  documentPrimary: string;
+  /** Two or three documents this trade could upload, for the explanatory copy. */
+  documentExamples: string;
 };
 
 export const SECTORS: readonly Sector[] = [
@@ -52,6 +61,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '🔧',
     catalogSingular: 'Service',
     catalogPlural: 'Services',
+    documentPrimary: 'price sheet',
+    documentExamples: 'price sheet, service list, or maintenance plan',
   },
   {
     id: 'plumbing',
@@ -60,6 +71,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '🚿',
     catalogSingular: 'Service',
     catalogPlural: 'Services',
+    documentPrimary: 'price sheet',
+    documentExamples: 'price sheet, call-out rates, or service list',
   },
   {
     id: 'electrical',
@@ -68,6 +81,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '⚡',
     catalogSingular: 'Service',
     catalogPlural: 'Services',
+    documentPrimary: 'rate sheet',
+    documentExamples: 'rate sheet, service list, or safety-check pricing',
   },
   {
     id: 'restaurant',
@@ -76,6 +91,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '🍽️',
     catalogSingular: 'Menu Item',
     catalogPlural: 'Menu Items',
+    documentPrimary: 'menu',
+    documentExamples: 'menu, specials board, or takeaway price list',
   },
   {
     id: 'real_estate',
@@ -84,6 +101,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '🏡',
     catalogSingular: 'Property Listing',
     catalogPlural: 'Property Listings',
+    documentPrimary: 'listing sheet',
+    documentExamples: 'listing sheet, feature list, or open-house flyer',
   },
   {
     id: 'auto_repair',
@@ -92,6 +111,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '🚗',
     catalogSingular: 'Service',
     catalogPlural: 'Services',
+    documentPrimary: 'service menu',
+    documentExamples: 'service menu, labour rates, or parts price list',
   },
   {
     id: 'salon_spa',
@@ -100,6 +121,8 @@ export const SECTORS: readonly Sector[] = [
     icon: '💇',
     catalogSingular: 'Service',
     catalogPlural: 'Services',
+    documentPrimary: 'service menu',
+    documentExamples: 'service menu, treatment list, or price card',
   },
   {
     id: 'fitness',
@@ -110,6 +133,8 @@ export const SECTORS: readonly Sector[] = [
     // rather than mechanically derived.
     catalogSingular: 'Membership or Class',
     catalogPlural: 'Memberships & Classes',
+    documentPrimary: 'membership plan',
+    documentExamples: 'membership plans, class timetable, or price list',
   },
 ];
 
@@ -143,4 +168,17 @@ export function catalogPlural(id: string | null | undefined): string {
 /** What this sector sells, singular. Used for empty states and add buttons. */
 export function catalogSingular(id: string | null | undefined): string {
   return getSector(id)?.catalogSingular ?? GENERIC_CATALOG.singular;
+}
+
+/**
+ * The document this trade most likely already has — "menu", "price sheet",
+ * "listing sheet". Names the scan action in the trade's own words.
+ */
+export function documentPrimary(id: string | null | undefined): string {
+  return getSector(id)?.documentPrimary ?? 'price list';
+}
+
+/** Documents this trade could upload, for explanatory copy. */
+export function documentExamples(id: string | null | undefined): string {
+  return getSector(id)?.documentExamples ?? 'price list, service list, or brochure';
 }

@@ -6,6 +6,8 @@ import {
   SECTOR_IDS,
   catalogPlural,
   catalogSingular,
+  documentExamples,
+  documentPrimary,
   getSector,
   isSectorId,
   sectorLabel,
@@ -64,6 +66,36 @@ describe('catalog nouns', () => {
     expect(`Add a ${catalogSingular('fitness').toLowerCase()}`).toBe(
       'Add a membership or class',
     );
+  });
+
+  it('asks each trade for a document it plausibly owns', () => {
+    // "Scan your menu" to a plumber is the tell that software was built for someone
+    // else. Pinned per sector so the copy cannot drift back to a generic default.
+    expect(documentPrimary('restaurant')).toBe('menu');
+    expect(documentPrimary('real_estate')).toBe('listing sheet');
+    expect(documentPrimary('plumbing')).toBe('price sheet');
+    expect(documentPrimary('electrical')).toBe('rate sheet');
+    expect(documentPrimary('fitness')).toBe('membership plan');
+    expect(documentPrimary('salon_spa')).toBe('service menu');
+  });
+
+  it('reads correctly in the scan prompt', () => {
+    expect(`Scan your ${documentPrimary('restaurant')}`).toBe('Scan your menu');
+    expect(`Scan your ${documentPrimary('real_estate')}`).toBe('Scan your listing sheet');
+    expect(`Scan your ${documentPrimary('hvac')}`).toBe('Scan your price sheet');
+  });
+
+  it('gives every sector document examples that are not the generic default', () => {
+    for (const sector of SECTORS) {
+      expect(sector.documentPrimary.trim().length).toBeGreaterThan(0);
+      expect(sector.documentExamples).toContain(',');
+    }
+  });
+
+  it('falls back to neutral document wording for an unknown sector', () => {
+    expect(documentPrimary(null)).toBe('price list');
+    expect(documentPrimary('sector_from_the_future')).toBe('price list');
+    expect(documentExamples(null)).toMatch(/price list/);
   });
 
   it('falls back to a generic noun for an unknown or unset sector', () => {
