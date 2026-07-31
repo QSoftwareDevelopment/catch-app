@@ -27,6 +27,13 @@ type OutreachContextValue = {
     status?: CampaignStatus;
   }) => Campaign;
   setStatus: (id: string, status: CampaignStatus) => void;
+  /**
+   * Edit an existing campaign, including one that is live.
+   *
+   * Status is never changed here. Saving an edit must not silently arm a paused
+   * campaign or disarm a live one — turning it on and off stays an explicit action.
+   */
+  updateCampaign: (id: string, patch: Partial<Omit<Campaign, 'id' | 'createdAt' | 'status'>>) => void;
   removeCampaign: (id: string) => void;
   /** Records a manual send. No gateway — marks it sent so the flow completes. */
   markSent: (id: string, recipients: number) => void;
@@ -123,6 +130,31 @@ export function OutreachProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const updateCampaign = useCallback<OutreachContextValue['updateCampaign']>((id, patch) => {
+    setState((prev) => ({
+      ...prev,
+      items: prev.items.map((c) => {
+        if (c.id !== id) return c;
+
+        const next = { ...c, ...patch };
+
+        // Fields only make sense for one shape of campaign. Leaving a stale schedule on
+        // a campaign switched to event, or a stale eventId on one switched to
+        // scheduled, would have it fire on the wrong condition.
+        if (next.triggerType !== 'scheduled') next.schedule = undefined;
+        if (next.triggerType !== 'event') next.eventId = undefined;
+        if (next.messageMode === 'custom') {
+          next.tone = undefined;
+          next.guidance = undefined;
+        } else {
+          next.message = undefined;
+        }
+
+        return next;
+      }),
+    }));
+  }, []);
+
   const removeCampaign = useCallback((id: string) => {
     setState((prev) => ({ ...prev, items: prev.items.filter((c) => c.id !== id) }));
   }, []);
@@ -143,11 +175,21 @@ export function OutreachProvider({ children }: { children: ReactNode }) {
       getCampaign,
       addCampaign,
       setStatus,
+      updateCampaign,
       removeCampaign,
       markSent,
       isDemoData: demoEnabled,
     }),
-    [campaigns, getCampaign, addCampaign, setStatus, removeCampaign, markSent, demoEnabled],
+    [
+      campaigns,
+      getCampaign,
+      addCampaign,
+      setStatus,
+      updateCampaign,
+      removeCampaign,
+      markSent,
+      demoEnabled,
+    ],
   );
 
   return <OutreachContext.Provider value={value}>{children}</OutreachContext.Provider>;
