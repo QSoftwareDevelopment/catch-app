@@ -197,8 +197,11 @@
       </div>
 
       <div class="controls">
+        <button id="demoToggle" onclick="toggleDemo()">Skip login (demo)</button>
         <button onclick="reloadApp()">Restart app</button>
-        <a class="linkbtn" href="./app/" target="_blank" rel="noopener">Open fullscreen</a>
+        <a class="linkbtn" id="fullscreen" href="./app/" target="_blank" rel="noopener"
+          >Open fullscreen</a
+        >
         <a
           class="linkbtn"
           href="https://github.com/QSoftwareDevelopment/catch-app"
@@ -210,17 +213,35 @@
 
       <p class="note">
         This is the real React Native app rendered for web, so it is a faithful preview of
-        layout and flow rather than a mockup. <strong>Signing up does not work yet</strong> —
-        the database schema is still being reconciled with the existing project.
+        layout and flow rather than a mockup. Real signup is still blocked on the database
+        schema, so use <strong>Skip login (demo)</strong> to reach the screens behind the
+        login wall — then open the <strong>Demo</strong> pill at the bottom of the phone to
+        switch sector and watch every label change.
       </p>
     </div>
 
     <script>
+      // Demo mode runs the app on fake data with no backend, so the screens behind the
+      // login wall are reachable while real signup is still blocked on the database.
+      var demo = false;
+
+      function appUrl() {
+        return './app/' + (demo ? '?demo=1&t=' : '?t=') + Date.now();
+      }
+
       function reloadApp() {
-        var f = document.getElementById('app');
         // Reassigning src rather than using contentWindow.location avoids touching the
-        // frame's history, so one click always lands back on the landing screen.
-        f.src = './app/?t=' + Date.now();
+        // frame's history, so one click always lands back on the first screen.
+        document.getElementById('app').src = appUrl();
+      }
+
+      function toggleDemo() {
+        demo = !demo;
+        document.getElementById('demoToggle').textContent = demo
+          ? 'Exit demo'
+          : 'Skip login (demo)';
+        document.getElementById('fullscreen').href = demo ? './app/?demo=1' : './app/';
+        reloadApp();
       }
 
       // Scale the phone down when the window cannot fit it at 1:1, but never so far
