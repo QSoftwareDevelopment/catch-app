@@ -2,27 +2,31 @@ import { Stack } from 'expo-router';
 import React from 'react';
 
 import { CatalogProvider } from '@/catalog/CatalogProvider';
+import { ConversationsProvider } from '@/conversations/ConversationsProvider';
 
 /**
  * Screens that require a session. The root layout is what keeps a signed-out user out of
  * this group.
  *
- * CatalogProvider sits here rather than inside the catalog screen so captured sources
- * survive navigating away and back.
+ * The providers sit here rather than inside their screens so captured sources and thread
+ * state survive navigating away and back.
  */
 export default function AppLayout() {
   return (
     <CatalogProvider>
-      <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="conversations" />
-        <Stack.Screen name="catalog" />
-        <Stack.Screen name="catalog-paste" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="outreach" />
-        {/* Settings is presented modally so it reads as stepping outside the main flow
-            rather than deeper into it. */}
-        <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-      </Stack>
+      <ConversationsProvider>
+        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="conversations" />
+          <Stack.Screen name="conversation/[id]" />
+          <Stack.Screen name="catalog" />
+          <Stack.Screen name="catalog-paste" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="outreach" />
+          {/* Settings is presented modally so it reads as stepping outside the main flow
+              rather than deeper into it. */}
+          <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+        </Stack>
+      </ConversationsProvider>
     </CatalogProvider>
   );
 }
