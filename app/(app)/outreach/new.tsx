@@ -50,11 +50,23 @@ export default function NewOutreachScreen() {
   const cost = messageCost(message, recipients);
   const schedule = { weekday, hour, minute: 0 };
 
-  function useSuggested(id: string) {
+  /**
+   * Selecting an event also seeds the message.
+   *
+   * Only ever fills an empty box — overwriting something the owner has typed would be
+   * worse than leaving them to write it themselves.
+   */
+  function chooseEvent(id: string) {
     setEventId(id);
     const suggestion = events.find((e) => e.id === id)?.suggestedMessage;
-    // Only fill an empty box — never overwrite something the owner has written.
     if (suggestion && message.trim().length === 0) setMessage(suggestion);
+  }
+
+  function chooseTrigger(next: TriggerType) {
+    setTrigger(next);
+    // The first event renders already ticked, so switching to Event must seed its
+    // message too — otherwise the tick claims a selection the composer ignored.
+    if (next === 'event' && eventId) chooseEvent(eventId);
   }
 
   function handleSubmit() {
@@ -111,7 +123,7 @@ export default function NewOutreachScreen() {
           return (
             <Pressable
               key={t}
-              onPress={() => setTrigger(t)}
+              onPress={() => chooseTrigger(t)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
               testID={`trigger-${t}`}
@@ -179,7 +191,7 @@ export default function NewOutreachScreen() {
             return (
               <Pressable
                 key={event.id}
-                onPress={() => useSuggested(event.id)}
+                onPress={() => chooseEvent(event.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 testID={`event-${event.id}`}
