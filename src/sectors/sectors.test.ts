@@ -1,7 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { SECTORS, SECTOR_IDS, getSector, isSectorId, sectorLabel } from './sectors';
+import {
+  SECTORS,
+  SECTOR_IDS,
+  catalogPlural,
+  catalogSingular,
+  getSector,
+  isSectorId,
+  sectorLabel,
+} from './sectors';
 
 describe('sector config', () => {
   it('has metadata for every id, and no extras', () => {
@@ -18,6 +26,53 @@ describe('sector config', () => {
       expect(sector.blurb.trim().length).toBeGreaterThan(0);
       expect(sector.icon.trim().length).toBeGreaterThan(0);
     }
+  });
+
+  it('gives every sector both catalog nouns', () => {
+    // A missing noun would render "Our undefined" on the home screen.
+    for (const sector of SECTORS) {
+      expect(sector.catalogSingular.trim().length).toBeGreaterThan(0);
+      expect(sector.catalogPlural.trim().length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('catalog nouns', () => {
+  // This mapping is the product promise: the app speaks the trade's language rather
+  // than calling everything a "product". Pinned per sector so a careless edit fails.
+  it.each([
+    ['hvac', 'Services'],
+    ['plumbing', 'Services'],
+    ['electrical', 'Services'],
+    ['restaurant', 'Menu Items'],
+    ['real_estate', 'Property Listings'],
+    ['auto_repair', 'Services'],
+    ['salon_spa', 'Services'],
+    ['fitness', 'Memberships & Classes'],
+  ])('%s sells "%s"', (id, expected) => {
+    expect(catalogPlural(id)).toBe(expected);
+  });
+
+  it('reads correctly in the home screen tile', () => {
+    expect(`Our ${catalogPlural('restaurant')}`).toBe('Our Menu Items');
+    expect(`Our ${catalogPlural('real_estate')}`).toBe('Our Property Listings');
+    expect(`Our ${catalogPlural('hvac')}`).toBe('Our Services');
+  });
+
+  it('has singular forms that read in a sentence', () => {
+    expect(`Add a ${catalogSingular('restaurant').toLowerCase()}`).toBe('Add a menu item');
+    expect(`Add a ${catalogSingular('fitness').toLowerCase()}`).toBe(
+      'Add a membership or class',
+    );
+  });
+
+  it('falls back to a generic noun for an unknown or unset sector', () => {
+    // A business predating the sector column, or one on a sector this build has not
+    // shipped yet, must still render a sensible tile rather than "Our undefined".
+    expect(catalogPlural(null)).toBe('Offerings');
+    expect(catalogPlural(undefined)).toBe('Offerings');
+    expect(catalogPlural('sector_from_the_future')).toBe('Offerings');
+    expect(catalogSingular(null)).toBe('Offering');
   });
 });
 

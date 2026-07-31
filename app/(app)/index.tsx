@@ -1,105 +1,120 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
-import { getSector } from '@/sectors/sectors';
+import { catalogPlural, getSector } from '@/sectors/sectors';
 import { colors, fontSize, radius, spacing } from '@/theme/theme';
-import { Button } from '@/ui/Button';
+import { ActionTile } from '@/ui/ActionTile';
 import { FormBanner } from '@/ui/FormBanner';
 import { Screen } from '@/ui/Screen';
 
 /**
- * Placeholder home, replaced in slice 2 by the real product surface.
+ * Home. Three primary destinations, plus Settings kept deliberately out of that group —
+ * it lives in the header so a mis-tap while reaching for a daily action cannot land on
+ * account settings.
  *
- * It earns its place by proving the whole loop end to end: the session survived, the
- * business row was created by the signup trigger, RLS let the owner read it, and sign-out
- * returns to the landing screen.
+ * The middle tile is sector-driven: a restaurant sees "Our Menu Items", a realtor sees
+ * "Our Property Listings". That mapping lives in src/sectors/sectors.ts, not here.
  */
 export default function HomeScreen() {
-  const { session, business, businessMissing, signOut } = useAuth();
-  const [signingOut, setSigningOut] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { business, businessMissing } = useAuth();
 
   const sector = getSector(business?.sector);
-
-  async function handleSignOut() {
-    if (signingOut) return;
-    setSigningOut(true);
-    setError(null);
-    try {
-      await signOut();
-      // No navigation call — the root layout reacts to the cleared session.
-    } catch {
-      setError('Could not sign out. Check your connection and try again.');
-      setSigningOut(false);
-    }
-  }
+  const catalogLabel = catalogPlural(business?.sector);
 
   return (
-    <Screen scroll contentStyle={styles.content} testID="home-screen">
-      <View>
-        <Text style={styles.eyebrow}>Signed in as {session?.user.email}</Text>
-        <Text style={styles.title}>{business?.name ?? 'Your business'}</Text>
-
-        {sector ? (
-          <View style={styles.sectorChip}>
-            <Text style={styles.sectorIcon}>{sector.icon}</Text>
-            <Text style={styles.sectorLabel}>{sector.label}</Text>
-          </View>
-        ) : null}
-
-        <FormBanner message={error} />
-
-        {businessMissing ? (
-          <FormBanner
-            tone="error"
-            message={
-              'Your account has no business record. This usually means the signup trigger ' +
-              'in supabase/migrations/0001_businesses.sql has not been run against this project.'
-            }
-          />
-        ) : null}
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>You are set up.</Text>
-          <Text style={styles.cardBody}>
-            {sector
-              ? `Next, Catch will connect a number your ${sector.label.toLowerCase()} ` +
-                'customers can text, and turn those threads into bookings and sales.'
-              : 'Next, Catch will connect a number your customers can text.'}
+    <Screen scroll testID="home-screen">
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={styles.greeting}>Your business</Text>
+          <Text style={styles.businessName} numberOfLines={1}>
+            {business?.name ?? 'Catch'}
           </Text>
+          {sector ? (
+            <View style={styles.sectorChip}>
+              <Text style={styles.sectorIcon}>{sector.icon}</Text>
+              <Text style={styles.sectorLabel}>{sector.label}</Text>
+            </View>
+          ) : null}
         </View>
+
+        {/* Settings sits apart from the three primary tiles on purpose. */}
+        <Pressable
+          onPress={() => router.push('/(app)/settings')}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          hitSlop={10}
+          style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsPressed]}
+          testID="home-settings"
+        >
+          <Text style={styles.settingsIcon}>⚙︎</Text>
+        </Pressable>
       </View>
 
-      <Button
-        label="Sign out"
-        variant="secondary"
-        onPress={handleSignOut}
-        loading={signingOut}
-        testID="home-sign-out"
-      />
+      {businessMissing ? (
+        <FormBanner
+          tone="error"
+          message={
+            'Your account has no business record yet, so this screen cannot show your ' +
+            'data. The Supabase migration still needs to be run against this project.'
+          }
+        />
+      ) : null}
+
+      <View style={styles.tiles}>
+        <ActionTile
+          icon="💬"
+          label="Conversations"
+          description="Every customer thread, in one inbox"
+          onPress={() => router.push('/(app)/conversations')}
+          testID="tile-conversations"
+        />
+
+        <ActionTile
+          icon={sector?.icon ?? '📦'}
+          label={`Our ${catalogLabel}`}
+          description={`What customers can book and buy by text`}
+          onPress={() => router.push('/(app)/catalog')}
+          testID="tile-catalog"
+        />
+
+        <ActionTile
+          icon="📣"
+          label="Outreach"
+          description="Reach past customers with a campaign"
+          onPress={() => router.push('/(app)/outreach')}
+          testID="tile-outreach"
+        />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
-  eyebrow: {
-    fontSize: fontSize.xs,
+  headerText: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: fontSize.sm,
     color: colors.textMuted,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  title: {
+  businessName: {
     fontSize: fontSize.display,
-    lineHeight: 40,
+    lineHeight: 38,
     fontWeight: '800',
     letterSpacing: -0.8,
     color: colors.text,
-    marginBottom: spacing.md,
   },
   sectorChip: {
     alignSelf: 'flex-start',
@@ -110,34 +125,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
   },
   sectorIcon: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
   },
   sectorLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    color: colors.textMuted,
   },
-  card: {
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
   },
-  cardTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.sm,
+  settingsPressed: {
+    opacity: 0.8,
+    borderColor: colors.borderStrong,
   },
-  cardBody: {
-    fontSize: fontSize.sm,
-    lineHeight: 22,
+  settingsIcon: {
+    fontSize: 20,
     color: colors.textMuted,
+  },
+  tiles: {
+    gap: spacing.md,
   },
 });
