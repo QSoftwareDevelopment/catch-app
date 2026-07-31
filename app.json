@@ -2,8 +2,15 @@
   "expo": {
     "name": "Catch",
     "slug": "catch-app",
+    "owner": "q_software_development",
     "version": "0.1.0",
     "scheme": "catch",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/eddbc297-ba3f-4a85-abdd-7cc4d0429ab8"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -37,6 +44,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eddbc297-ba3f-4a85-abdd-7cc4d0429ab8"
+      }
     }
   }
 }
